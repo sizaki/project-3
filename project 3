@@ -1,0 +1,332 @@
+package Sean_I;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
+
+public class RoadTrip {
+	/*
+	 * Alternatives: Route to closest city with an attraction, then do it again, and
+	 * again, until all attractions met
+	 */
+
+	static List<Road> roadList;
+	static HashMap<String, Attraction> attractionMap;
+	static HashMap<String, City> cities;
+
+	public static void main(String[] args) throws IOException {
+		List<String> attractions = new ArrayList<>();
+		/*
+		 * (attractions.add("Newport mansions"); attractions.add("Boot Hill");
+		 * attractions.add("Alcatraz"); attractions.add("Cape Flattery");
+		 * attractions.add("US Space and Rocket Center");
+		 * attractions.add("US Naval Academy");
+		 * attractions.add("National Dinosaur Monument");
+		 * attractions.add("West Okojobi Lake"); attractions.add("U.S. Mailboat Tour");
+		 * 
+		 * 
+		 * List<Road> route = route("Abilene TX", "Syracuse NY", attractions);
+		 */
+
+		File roadFile = new File("C:\\Users\\Sean Izaki\\Downloads\\roads.csv");
+		File attractionFile = new File("C:\\Users\\Sean Izaki\\Downloads\\attractions.csv");
+
+		Scanner roadReader = new Scanner(roadFile);
+		Scanner attractionReader = new Scanner(attractionFile);
+
+		attractionReader.nextLine();
+		roadList = new ArrayList<Road>();
+		attractionMap = new HashMap<String, Attraction>();
+		cities = new HashMap<>();
+
+		while (roadReader.hasNextLine()) {
+			String line = roadReader.nextLine();
+			// System.out.println(line);
+			String[] things = line.split(",");
+
+			String from = things[0];
+			String to = things[1];
+			if (cities.get(from) == null)
+				cities.put(from, new City(from));
+			if (cities.get(to) == null)
+				cities.put(to, new City(to));
+			int miles = Integer.parseInt(things[2]);
+			int minutes = Integer.parseInt(things[3]);
+
+			Road one = new Road(cities.get(from), cities.get(to), miles, minutes);
+			Road two = new Road(cities.get(to), cities.get(from), miles, minutes);
+
+			roadList.add(one);
+			cities.get(from).roads.add(one);
+			cities.get(to).roads.add(two);
+		}
+		roadReader.close();
+
+		while (attractionReader.hasNextLine()) {
+			String line = attractionReader.nextLine();
+			int index = line.indexOf(",");
+			String name = line.substring(0, index);
+			String location = line.substring(index + 1);
+			if (attractions.contains(name)) {
+				System.out.println(name + ", located in " + location);
+			}
+
+			Attraction attraction = new Attraction(name, cities.get(location));
+			attractionMap.put(name, attraction);
+			cities.get(location).attractions.put(name, attraction);
+		}
+		attractionMap.put("Statue of Liberty", new Attraction("Statue of Liberty", cities.get("New York NY")));
+		attractionMap.put("Grand Canyon", new Attraction("Grand Canyon", cities.get("Phoenix AZ")));
+		attractionReader.close();
+
+		Scanner input = new Scanner(System.in);
+		System.out.print("Name of starting city (or EXIT to quit): ");
+		String start = "San Francisco CA";// input.nextLine();
+		if (start.equals("EXIT")) {
+			return;
+		}
+		System.out.print("Name of ending city: ");
+		String end = "Miami FL";// input.nextLine();
+
+		while (Math.random() < .000001/* true */) {
+			System.out.print("List an attraction along the way (or ENOUGH to stop listing): ");
+			String add = input.nextLine();
+			if (add.equals("ENOUGH")) {
+				break;
+			}
+			if (attractionMap.get(add) == null) {
+				System.out.println("Attraction \"" + add + "\" unknown");
+			}
+			attractions.add(add);
+		}
+		attractions.add("Grand Canyon");
+		attractions.add("Boot Hill");
+		input.close();
+
+		//List<Road> route = route(start, end, attractions);
+		List<Road> route = route2(start, end, attractions);
+		// System.out.println("Start route: " + route);
+
+		System.out.println("Here is the best route for your trip: ");
+		for (int i = 0; i < route.size(); i++) {
+			System.out.println("* " + route.get(i).start.name + " -> " + route.get(i).end.name);
+		}
+
+		System.out.println("Total stops: " + route.size());
+		int totalTime = 0;
+		for (Road me : route) {
+			totalTime += me.minutes;
+		}
+		System.out.println("Total trip time: " + (totalTime / 60) + " hours, " + (totalTime % 60) + " minutes");
+		System.out.println("Unvisited attractions:\n" + attractions);
+
+		List<String> locations = new ArrayList<>();
+		for (Road me : route) {
+			locations.add(me.end.name);
+		}
+		/*
+		 * System.out.println("Did we visit Huntsville AL? " +
+		 * locations.contains("Huntsville AL"));
+		 * System.out.println("Did we visit San Francisco CA? " +
+		 * locations.contains("San Francisco CA"));
+		 * System.out.println("Did we visit Dodge City KS? " +
+		 * locations.contains("Dodge City KS"));
+		 * System.out.println("Did we visit Newport RI? " +
+		 * locations.contains("Newport RI"));
+		 * System.out.println("Did we visit Lake Geneva WI? " +
+		 * locations.contains("Lake Geneva WI"));
+		 * System.out.println("Did we visit West Okojobi Lake IA? " +
+		 * locations.contains("West Okojobi Lake IA"));
+		 * System.out.println("Did we visit Jensen UT? " +
+		 * locations.contains("Jensen UT"));
+		 * System.out.println("Did we visit Annapolis MD? " +
+		 * locations.contains("Annapolis MD"));
+		 * System.out.println("Did we visit Cape Flattery WA? " +
+		 * locations.contains("Cape Flattery WA"));
+		 */
+	}
+
+	public static List<Road> route(String start, String end, List<String> attractions) throws IOException {
+		List<Road> path = new ArrayList<Road>();
+
+		City current = cities.get(start);
+		current.visited = true;
+
+		while (attractions.size() != 0) {
+			// System.out.println("Current location: " + current.name);
+			Road result = current.shortestRoad();
+			if (result == null) {
+				current = path.remove(path.size() - 1).start;
+
+				/*
+				 * System.out.println("Currently at a dead end: " + current.name); current =
+				 * path.get(path.size()-1).start; Road look = path.get(path.size()-1);
+				 * path.add(new Road(look.end, look.start, look.miles, look.minutes));
+				 * System.out.println("Going back a step to " + current.name);
+				 */
+
+				// Consider adding the reverse of the road and updating current
+				// to be the last city instead of removing the last road entirely
+				continue;
+			}
+			path.add(result);
+			current = result.end;
+			current.visited = true;
+
+			for (String you : attractions) {
+				Attraction possible = current.attractions.get(you);
+				if (possible != null) {
+					System.out.println("Visited " + possible.name + "! Current stops: " + path.size());
+					attractions.remove(possible.name);
+					break;
+				}
+			}
+		}
+		// System.out.println("Unvisited attractions: " + attractions);
+		return path;
+	}
+
+	public static List<Road> route2(String start, String end, List<String> attractions) throws IOException {
+		for (City me : cities.values()) {
+			me.distance = Integer.MAX_VALUE;
+			me.previous = null;
+		}
+
+		HashSet<Road> routing = new HashSet<Road>();
+		HashSet<Road> taken = new HashSet<Road>();
+		City current = cities.get(start);
+		routing.addAll(current.roads);
+
+		boolean flag = true;
+		while (attractions.size() > 0) {
+			while (flag) {
+				int shortest = Integer.MAX_VALUE;
+				Road nearest = null;
+				for (Road me : routing) {
+					me.end.distance = Math.min(me.start.distance + me.miles, me.end.distance);
+					if(me.start.distance + me.miles< me.end.distance) me.end.previous = me;
+					
+					if (me.miles < shortest) {
+						shortest = me.miles;
+						nearest = me;
+						taken.add(me);
+					}
+				}
+				if(routing.size() == 0) break;
+				current = nearest.end;
+				routing.addAll(current.roads);
+				routing.removeAll(taken);
+
+				for (String you : attractions) {
+					Attraction possible = current.attractions.get(you);
+					if (possible != null) {
+						attractions.remove(possible.name);
+						flag = false;
+						break;
+					}
+				}
+			}
+			for (City me : cities.values()) {
+				me.distance = Integer.MAX_VALUE;
+			}
+		}
+		
+		List<Road> path = new ArrayList<Road>();
+		while(current != null) {
+			path.add(0, current.previous);
+			current = current.previous.start;
+		}
+		return path;
+	}
+
+	private static class Attraction {
+		public String name;
+		public City location;
+
+		public Attraction(String attraction, City location) {
+			this.name = attraction;
+			this.location = location;
+		}
+
+		public String toString() {
+			return name + ", " + location.name + "\n";
+		}
+	}
+
+	private static class Road {
+		public City start;
+		public City end;
+		public int miles;
+		public int minutes;
+		public boolean checked;
+
+		public Road(City start, City end, int miles, int minutes) {
+			this.start = start;
+			this.end = end;
+			this.miles = miles;
+			this.minutes = minutes;
+		}
+
+		public String toString() {
+			return start.name + " -to- " + end.name + " (" + miles + " miles) (" + minutes + " minutes)\n";
+		}
+	}
+
+	private static class City {
+		public String name;
+		public int distance;
+		public Road previous;
+		public List<Road> roads = new ArrayList<Road>();
+		public boolean visited;
+		public boolean deadEnd;
+		public HashMap<String, Attraction> attractions = new HashMap<>();
+
+		public City(String name) {
+			this.name = name;
+		}
+
+		public Road shortestRoad() {
+			int min = Integer.MAX_VALUE;
+			Road result = null;
+
+			for (Road me : roads) {
+				if (!me.end.visited && me.minutes < min) {
+					min = me.minutes;
+					result = me;
+				}
+			}
+
+			if (result != null)
+				return result;
+			else {
+				deadEnd = true;
+				// System.out.println("Visited all adjacent towns: checking for any non-dead end
+				// route");
+				Road emergency = null;
+				int emergencyMin = Integer.MAX_VALUE;
+				for (Road me : roads) {
+					if (!me.end.deadEnd && me.minutes < min) {
+						// System.out.println("Found non-dead end route");
+						emergency = me;
+						emergencyMin = me.minutes;
+					}
+				}
+				if (emergency != null)
+					return emergency;
+
+				// System.out.println("All surrounding towns are dead ends, going back a step");
+				return null;
+			}
+		}
+
+		public String toString() {
+			return name;
+		}
+	}
+}
