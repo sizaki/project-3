@@ -1,0 +1,41 @@
+Road
++City start
++City end
++int miles
++int minutes
++boolean checked
++Road counterpart
+--------------------------
++Road(City, City, int, int)
++toString()
+
+
+	City
++String name
++int distance
++Road previous
++List<Road> roads
++boolean visited
++boolean deadEnd
++HashMap<String, Attraction> attractions
+--------------------------
++City(String name)
++toString() : String
+
+
+
+	Attraction
++String name
++City location
+--------------------------
++Attraction(name:String, location:String)
++toString() : String
+
+
+	RoadTrip
++List<Road> roadList
++HashMap<String, Attraction> attractionMap
++HashMap<String, City> cities
+--------------------------
++main(String[] args) : void
++route(start:String, end:String, attractions:List<String>) : List<Road>
